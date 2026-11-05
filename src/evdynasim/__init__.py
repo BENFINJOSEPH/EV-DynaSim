@@ -17,4 +17,4 @@ __all__ = [
     "steady_state_power_w",
 ]
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"

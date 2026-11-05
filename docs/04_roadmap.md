@@ -11,8 +11,9 @@
 | 5 | Measured data, calibration, validation | done | signal mapping importer, synthetic data with known truth, least squares with confidence intervals, validation metrics, report |
 | 6 | Forward simulation and control | done | ODE model, RK4 and Euler with convergence test, PI driver with feed-forward and anti-windup |
 | 7 | Studies and tooling | done | sensitivity, ambient temperature, benchmark, `evdynasim all`, CI configuration |
+| 8 | DC fast charging | done | BMS charge strategy (C-rate with temperature and SOC derating, charger power, CV limit), active cooling, 13 requirements with a 46-case test specification, charging studies |
 
-Size: about 2 700 lines of Python, 1 300 lines of C++, 98 Python tests and
+Size: about 3 200 lines of Python, 1 300 lines of C++, 144 Python tests and
 25 C++ tests.
 
 ## 4.2 Next steps with the highest value
@@ -35,6 +36,8 @@ Size: about 2 700 lines of Python, 1 300 lines of C++, 98 Python tests and
 
 ## 4.3 Further extensions
 
+* Charging: preconditioning model with heater energy and timing, port the
+  charging logic to C++, a cell-level model where the hottest cell sets the derating.
 * MPC eco-driving or predictive regen on a short horizon, compared with the PI driver.
 * Two-speed gearbox with a shift strategy (needed for the Taycan).
 * OCV hysteresis, second RC pair, ageing (capacity and resistance vs cycles).

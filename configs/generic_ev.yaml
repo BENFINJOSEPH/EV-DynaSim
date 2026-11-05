@@ -65,3 +65,17 @@ thermal:
   heat_capacity_j_kgk: 1000.0
   h_a_w_k: 30.0                   # heat transfer to ambient (passive)
   initial_temp_c: 25.0
+
+charging:                         # DC fast charging (used by evdynasim charge / charging study)
+  charger_max_power_kw: 150.0     # charging station limit
+  charger_efficiency: 0.95        # grid -> battery terminals
+  max_c_rate: 2.0                 # 2C = 400 A for the 200 Ah pack
+  cv_cell_voltage_v: 4.15         # constant-voltage limit per cell (pack: 398.4 V)
+  derate_temp_c: [-20.0, 0.0, 10.0, 25.0, 45.0, 50.0]   # BMS temperature derating table
+  derate_temp_factor: [0.05, 0.15, 0.50, 1.00, 1.00, 0.30]   # fraction of max_c_rate allowed
+  derate_soc: [0.00, 0.50, 0.70, 0.80, 0.90, 1.00]       # BMS SOC derating table (taper)
+  derate_soc_factor: [1.00, 1.00, 0.75, 0.55, 0.35, 0.15]
+  max_cell_temp_c: 55.0           # charging stops above this battery temperature
+  cooling_w_k: 250.0              # active cooling while charging (chiller loop)
+  coolant_temp_c: 25.0
+  end_current_c_rate: 0.05        # CV phase ends below C/20

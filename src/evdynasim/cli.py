@@ -95,6 +95,24 @@ def cmd_forward(args) -> int:
     return 0
 
 
+def cmd_charge(args) -> int:
+    from evdynasim.charging import simulate_charging
+
+    p = load_params(args.config)
+    r = simulate_charging(p, args.soc_start, args.soc_target, ambient_temp_c=args.ambient,
+                          initial_temp_c=args.battery_temp, charger_power_kw=args.charger_kw)  # fmt: skip
+    print("DC charging session")
+    _print_dict(r.summary)
+    if out := _out(args.out):
+        from evdynasim.plotting import plot_charging_session
+
+        r.series.to_csv(out / "charging_timeseries.csv", index=False)
+        (out / "charging_summary.json").write_text(json.dumps(r.summary, indent=2))
+        plot_charging_session(r, out / "charging_session.png")
+        print(f"results written to {out.resolve()}")
+    return 0
+
+
 def cmd_validate(args) -> int:
     from evdynasim.measured import load_mapping, load_measured_csv
     from evdynasim.report import run_validation
@@ -140,6 +158,29 @@ def cmd_study(args) -> int:
                 df.to_csv(out / f"sensitivity_{name.split()[0].lower()}.csv", index=False)
         if out:
             plotting.plot_tornado(tables, out / "sensitivity_tornado.png")
+    elif args.kind == "charging":
+        from evdynasim import charging
+
+        amb = charging.ambient_study(p)
+        pw = charging.charger_power_study(p)
+        print(amb.round(1).to_string(index=False))
+        print(pw.round(1).to_string(index=False))
+        if out:
+            amb.to_csv(out / "charging_ambient.csv", index=False)
+            pw.to_csv(out / "charging_power.csv", index=False)
+            plotting.plot_charging_studies(amb, pw, out / "charging_studies.png")
+            runs = {
+                "25 degC": charging.simulate_charging(p, 0.1, 0.8, ambient_temp_c=25.0),
+                "10 degC parked": charging.simulate_charging(p, 0.1, 0.8, ambient_temp_c=10.0),
+                "0 degC parked": charging.simulate_charging(p, 0.1, 0.8, ambient_temp_c=0.0),
+                "0 degC preconditioned": charging.simulate_charging(
+                    p, 0.1, 0.8, ambient_temp_c=0.0, initial_temp_c=25.0
+                ),
+            }
+            plotting.plot_charging_curves(runs, out / "charging_curves.png")
+            full = charging.simulate_charging(p, 0.1, 1.0)
+            plotting.plot_charging_session(full, out / "charging_session_full.png")
+            plotting.plot_charging_session(runs["25 degC"], out / "charging_session_10_80.png")
     else:
         df = studies.ambient_sweep(p, nedc())
         print(df.round(2).to_string(index=False))
@@ -169,6 +210,7 @@ def cmd_all(args) -> int:
     cmd_cycle(argparse.Namespace(config=cfg, cycle="nedc", engine="python", out=str(out / "nedc")))
     cmd_study(argparse.Namespace(config=cfg, kind="sensitivity", out=str(out / "studies")))
     cmd_study(argparse.Namespace(config=cfg, kind="ambient", out=str(out / "studies")))
+    cmd_study(argparse.Namespace(config=cfg, kind="charging", out=str(out / "charging")))
 
     p = load_params(cfg)
     weak = with_changes(p, {"motor.max_power_w": 25_000.0})
@@ -215,6 +257,16 @@ def build_parser() -> argparse.ArgumentParser:
     f.add_argument("--integrator", choices=["rk4", "euler"], default="rk4")
     f.add_argument("--out")
 
+    ch = add("charge", cmd_charge, "simulate a DC fast-charging session")
+    ch.add_argument("--soc-start", type=float, default=0.10)
+    ch.add_argument("--soc-target", type=float, default=0.80)
+    ch.add_argument("--charger-kw", type=float, help="charging station power (default: config)")
+    ch.add_argument("--ambient", type=float, help="ambient temperature in degC (default: config)")
+    ch.add_argument(
+        "--battery-temp", type=float, help="battery temperature at plug-in (default: ambient)"
+    )
+    ch.add_argument("--out")
+
     v = add("validate", cmd_validate, "calibrate on measured drives and validate on others")
     v.add_argument(
         "--drives", nargs="+", required=True, help="CSV files; first n-train are for calibration"
@@ -228,7 +280,7 @@ def build_parser() -> argparse.ArgumentParser:
     d.add_argument("--out", default="results/validation")
 
     st = add("study", cmd_study, "sensitivity or ambient temperature study")
-    st.add_argument("kind", choices=["sensitivity", "ambient"])
+    st.add_argument("kind", choices=["sensitivity", "ambient", "charging"])
     st.add_argument("--out")
 
     b = add("benchmark", cmd_benchmark, "runtime of the Python and C++ engines")

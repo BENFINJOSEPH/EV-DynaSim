@@ -68,9 +68,18 @@ def current_for_power(e_v: float, r0: float, power_w: float) -> tuple[float, boo
 
 
 def step(
-    p: ModelParams, state: BatteryState, terminal_power_w: float, dt_s: float
+    p: ModelParams,
+    state: BatteryState,
+    terminal_power_w: float,
+    dt_s: float,
+    extra_heat_removal_w: float = 0.0,
 ) -> tuple[BatteryState, BatteryStep]:
-    """Advance the battery by one step with constant terminal power."""
+    """Advance the battery by one step with constant terminal power.
+
+    ``extra_heat_removal_w`` is heat taken out by active cooling (used while
+    charging); 0 while driving, which keeps the driving model identical to the
+    C++ engine.
+    """
     bat, th = p.battery, p.thermal
     ocv = float(bat.ocv_pack_v(state.soc))
     r0 = float(bat.r0_pack_ohm(state.temp_c))
@@ -88,7 +97,9 @@ def step(
     u1_next = state.u1_v * decay + r1 * (1.0 - decay) * current
     soc_next = state.soc - current * dt_s / (3600.0 * bat.capacity_ah)
     q_out = th.h_a_w_k * (state.temp_c - p.env.ambient_temp_c)
-    temp_next = state.temp_c + dt_s * (heat - q_out) / (th.mass_kg * th.heat_capacity_j_kgk)
+    temp_next = state.temp_c + dt_s * (heat - q_out - extra_heat_removal_w) / (
+        th.mass_kg * th.heat_capacity_j_kgk
+    )
 
     return (
         BatteryState(soc=soc_next, u1_v=u1_next, temp_c=temp_next),

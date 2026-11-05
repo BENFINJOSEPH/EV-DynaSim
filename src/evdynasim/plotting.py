@@ -199,3 +199,117 @@ def plot_motor_map(p: ModelParams, res: SimulationResult, out_file: Path) -> Pat
     fig.savefig(out_file, dpi=150)
     plt.close(fig)
     return out_file
+
+
+_PHASE_COLORS = {"CC": "#d9ead3", "CC*": "#fff2cc", "CP": "#cfe2f3", "CV": "#f4cccc"}
+
+
+def plot_charging_session(res, out_file: Path, title: str = "") -> Path:
+    """Current with its three limits, voltage, power, SOC and temperature; phases shaded."""
+    s = res.series
+    t = s["t_end_s"].to_numpy() / 60.0
+    fig, axes = plt.subplots(4, 1, figsize=(11, 10), sharex=True)
+
+    # phase shading
+    phase = s["phase"].to_numpy()
+    start = 0
+    for k in range(1, len(phase) + 1):
+        if k == len(phase) or phase[k] != phase[start]:
+            for ax in axes:
+                ax.axvspan(t[start] - s["dt_s"].iloc[0] / 60, t[k - 1], color=_PHASE_COLORS[phase[start]],
+                           lw=0)  # fmt: skip
+            start = k
+
+    ax = axes[0]
+    ax.plot(t, s["charge_current_a"], "k", lw=2, label="charge current")
+    ax.plot(t, s["limit_cc_a"], "--", lw=1, label="C-rate limit (derated)")
+    ax.plot(t, s["limit_cp_a"], "--", lw=1, label="charger power limit")
+    ax.plot(t, np.minimum(s["limit_cv_a"], 1.5 * s["charge_current_a"].max()), "--", lw=1,
+            label="voltage limit")  # fmt: skip
+    ax.set_ylabel("Current (A)")
+    ax.set_ylim(0, 1.3 * s["charge_current_a"].max())
+    ax.legend(fontsize=8, loc="lower left", ncol=2)
+
+    ax = axes[1]
+    ax.plot(t, s["terminal_v"], lw=1.5, label="terminal voltage")
+    ax.plot(t, s["ocv_v"], lw=1.0, alpha=0.7, label="open-circuit voltage")
+    ax.axhline(res.summary["voltage_limit_v"], color="tab:red", ls=":", label="CV limit")
+    ax.set_ylabel("Voltage (V)")
+    ax.legend(fontsize=8, loc="lower right")
+
+    ax = axes[2]
+    ax.plot(t, s["grid_power_kw"], lw=1.0, label="from grid")
+    ax.plot(t, s["power_in_kw"], lw=1.5, label="into battery")
+    ax.set_ylabel("Power (kW)")
+    ax.legend(fontsize=8, loc="lower left")
+
+    ax = axes[3]
+    ax.plot(t, s["soc_end"] * 100, lw=1.5, color="tab:green", label="SOC")
+    ax.set_ylabel("SOC (%)")
+    ax2 = ax.twinx()
+    ax2.plot(t, s["temp_end_c"], lw=1.5, color="tab:red", label="battery temperature")
+    ax2.set_ylabel("Temperature (degC)")
+    ax.set_xlabel("Time (min)")
+    ax.legend(fontsize=8, loc="upper left")
+    ax2.legend(fontsize=8, loc="lower right")
+
+    for ax in axes:
+        ax.grid(True, alpha=0.3)
+    handles = [plt.Rectangle((0, 0), 1, 1, color=c) for c in _PHASE_COLORS.values()]
+    fig.legend(handles, ["CC: current limit", "CC*: derated current limit", "CP: charger power limit",
+                         "CV: voltage limit"], loc="upper center", ncol=4, fontsize=8,
+               bbox_to_anchor=(0.5, 0.965))  # fmt: skip
+    sm = res.summary
+    fig.suptitle(title or (f"DC charging {sm['soc_start']:.0%} -> {sm['soc_end']:.0%}: "
+                           f"{sm['duration_min']:.1f} min, {sm['charger_power_kw']:.0f} kW charger, "
+                           f"{sm['ambient_temp_c']:.0f} degC"))  # fmt: skip
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
+    fig.savefig(out_file, dpi=140)
+    plt.close(fig)
+    return out_file
+
+
+def plot_charging_curves(runs: dict, out_file: Path) -> Path:
+    """Charging power vs SOC for several sessions (dict: label -> ChargeResult)."""
+    fig, ax = plt.subplots(figsize=(9, 5))
+    for label, r in runs.items():
+        s = r.series
+        ax.plot(s["soc_end"] * 100, s["power_in_kw"], lw=1.8,
+                label=f"{label}: {r.summary['duration_min']:.0f} min")  # fmt: skip
+    ax.set_xlabel("SOC (%)")
+    ax.set_ylabel("Charging power into battery (kW)")
+    ax.set_title("Charging curves 10 -> 80 %, 150 kW charger")
+    ax.grid(True, alpha=0.3)
+    ax.legend(fontsize=8)
+    fig.tight_layout()
+    fig.savefig(out_file, dpi=150)
+    plt.close(fig)
+    return out_file
+
+
+def plot_charging_studies(ambient_df, power_df, out_file: Path) -> Path:
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4.5))
+    ax = axes[0]
+    temps = sorted(ambient_df["ambient_c"].unique())
+    x = np.arange(len(temps))
+    for k, (label, color) in enumerate((("parked", "tab:blue"), ("preconditioned", "tab:orange"))):
+        d = ambient_df[ambient_df["battery_start"] == label].set_index("ambient_c").loc[temps]
+        bars = ax.bar(x + (k - 0.5) * 0.4, d["time_min"], 0.4, color=color,
+                      label=f"battery {label}")  # fmt: skip
+        ax.bar_label(bars, fmt="%.0f", fontsize=8, padding=2)
+    ax.set_xticks(x, [f"{t} degC" for t in temps])
+    ax.set_ylabel("Time 10 -> 80 % (min)")
+    ax.set_title("Charge time vs ambient temperature (150 kW)")
+    ax.legend(fontsize=8)
+    ax.grid(True, axis="y", alpha=0.3)
+
+    ax = axes[1]
+    ax.plot(power_df["charger_kw"], power_df["time_min"], "o-", lw=2)
+    ax.set_xlabel("Charging station power (kW)")
+    ax.set_ylabel("Time 10 -> 80 % (min)")
+    ax.set_title("Charge time vs charger power (25 degC)")
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(out_file, dpi=150)
+    plt.close(fig)
+    return out_file

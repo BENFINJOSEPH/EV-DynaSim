@@ -20,7 +20,8 @@ current step without looking at the code.
 | 10 | `evdynasim_c.h`, `c_api.cpp`, `cpp_engine.py` | C interface, ctypes | ABI, `extern "C"`, ownership of memory |
 | 11 | `forward.py`, `tests/test_forward.py` | ODE, RK4, PI control, anti-windup | closures, numerical order |
 | 12 | `measured.py`, `synthetic.py`, `calibration.py`, `report.py` | data pipeline, least squares, validation | pandas, SciPy, covariance from the Jacobian |
-| 13 | `studies.py`, `cli.py` | studies, command line | argparse sub-commands |
+| 13 | `charging.py`, `tests/test_charging.py`, `docs/09_charging.md` | BMS charge strategy, requirements-based testing | while loops, `min(dict, key=...)`, parametrised tests, fixtures with `scope="module"` |
+| 14 | `studies.py`, `cli.py` | studies, command line | argparse sub-commands |
 
 Debugging tip: in VS Code open a test file, set a breakpoint in the function
 under test, run *Debug Test*, and inspect the arrays in the Variables panel.
@@ -73,6 +74,14 @@ target and press F5.
 20. Cd and Crr have a correlation of -0.95. What does that mean and how would you design a test drive to separate them?
 21. Why are your confidence intervals too optimistic?
 22. Why did smoothing the measured speed change the predicted energy by 1 %?
+
+**Charging and testing**
+26. Which three limits decide the charging current, and which one is active in each phase?
+27. Why does a 350 kW charger not charge this car faster than a 150 kW one?
+28. Why does a cold battery charge so slowly, and what does preconditioning do?
+29. Why are the safety requirements tested over a scenario matrix and not at one temperature?
+30. Why does the worst-case temperature test switch the cooling off?
+31. What is requirements traceability, and how does the test file show it?
 
 **Control**
 23. What does the feed-forward term do, and how large is the tracking error without it?

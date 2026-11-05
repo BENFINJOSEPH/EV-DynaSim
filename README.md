@@ -9,6 +9,8 @@ motor and gearbox losses, friction brakes, auxiliaries/HVAC and battery losses.
 It calibrates uncertain vehicle parameters against measured drives and reports
 how well the calibrated model predicts drives it has never seen.
 
+**Start here: [the project story](docs/00_project_story.md)** - problem, approach, results and how they were verified, on one page.
+
 ![NEDC simulation](docs/img/nedc_cycle.png)
 
 ## What it does
@@ -19,7 +21,9 @@ how well the calibrated model predicts drives it has never seen.
 | Powertrain | Single-speed gearbox, motor torque envelope (constant torque / constant power), motor + inverter **loss map**, regenerative braking with power, torque and speed limits |
 | Battery | Pack of cells, **1-RC equivalent circuit**, OCV(SOC) table, temperature-dependent resistance (Arrhenius), SOC-dependent charge limit, Coulomb counting |
 | Thermal | Lumped battery thermal model; HVAC load as a function of ambient temperature |
+| Charging | DC fast charging with BMS logic: C-rate limit derated by temperature and SOC, charger power limit, CV voltage limit, active cooling; CC / CP / CV phases |
 | Simulation | Backward (speed in, power out) and **forward** (PI driver with feed-forward and anti-windup, RK4 / Euler) |
+| Charging tests | 13 written requirements (voltage, current, power, temperature limits, stop conditions) with IDs, tested over a scenario matrix of ambient temperature x charger power |
 | Verification | Energy balance closes to 1e-10, hand calculations, integrator convergence order vs analytical solution, C++ = Python to 1e-9 |
 | Calibration | Nonlinear least squares (SciPy) with confidence intervals and parameter correlation |
 | Validation | Separate calibration and validation drives; RMSE, bias, trip energy error; automatic Markdown report |
@@ -36,6 +40,7 @@ how well the calibrated model predicts drives it has never seen.
 | Largest sensitivity, motorway 120 km/h | drag coefficient: +/-10 % Cd -> +/-6.2 % energy |
 | Validation trip energy error, before / after calibration | 7.1 % / 0.2 % (synthetic data, see below) |
 | PI driver with a too-weak motor: speed overshoot with / without anti-windup | 0.1 km/h / 17.1 km/h |
+| DC fast charge 10 -> 80 % on 150 kW at 25 degC / 0 degC / 0 degC preconditioned | 23.6 / 86 / 23.6 min |
 | Runtime per NEDC run: Python / C++ | 31 ms / 0.28 ms |
 
 The vehicle parameters are assumed example values, not data of a real car.
@@ -48,6 +53,7 @@ file (a template for the TUM Porsche Taycan dataset is included).
 |---|---|
 | ![Sensitivity](docs/img/sensitivity_tornado.png) | ![Ambient](docs/img/ambient_sweep.png) |
 | ![Validation](docs/img/validation_timeseries.png) | ![Anti-windup](docs/img/forward_anti_windup.png) |
+| ![Charging session](docs/img/charging_session_full.png) | ![Charging studies](docs/img/charging_studies.png) |
 
 ## Quick start (Windows)
 
@@ -55,7 +61,7 @@ file (a template for the TUM Porsche Taycan dataset is included).
 cd EV-DynaSim
 py -3.13 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e ".[dev]"
-.\.venv\Scripts\python.exe -m pytest                    # Python tests
+.\.venv\Scripts\python.exe -m pytest                    # Python tests (144)
 
 # C++ engine (Developer PowerShell for VS 2022)
 cmake -S cpp -B build
@@ -73,6 +79,8 @@ evdynasim steady   --config configs/generic_ev.yaml --speed 50 100 130
 evdynasim cycle    --config configs/generic_ev.yaml --cycle nedc --out results/nedc
 evdynasim cycle    --config configs/generic_ev.yaml --cycle nedc --engine cpp
 evdynasim forward  --config configs/generic_ev.yaml --cycle nedc --max-power-kw 25 --out results/fwd
+evdynasim charge   --config configs/generic_ev.yaml --soc-start 0.1 --soc-target 0.8 --ambient 0 --out results/charge
+evdynasim study    charging --config configs/generic_ev.yaml --out results/charging
 evdynasim study    sensitivity --config configs/generic_ev.yaml --out results/studies
 evdynasim demo-validation --config configs/generic_ev.yaml --out results/validation
 evdynasim validate --config configs/generic_ev.yaml --mapping my_mapping.yaml `
@@ -96,6 +104,7 @@ EV-DynaSim/
 │   ├── cycles.py          NEDC, CSV cycles
 │   ├── simulate.py        backward simulation, energy balance
 │   ├── forward.py         forward simulation, PI driver, RK4/Euler
+│   ├── charging.py        DC fast charging: BMS limits, CC/CP/CV, cooling, studies
 │   ├── measured.py        import of measured drives (signal mapping, resampling)
 │   ├── synthetic.py       synthetic measured drives with known truth
 │   ├── calibration.py     least-squares calibration, validation metrics
@@ -110,7 +119,7 @@ EV-DynaSim/
 │   ├── apps/main.cpp      command line executable
 │   ├── tests/             GoogleTest unit tests
 │   └── CMakeLists.txt
-├── tests/                 pytest suite (98 tests, incl. C++ vs Python)
+├── tests/                 pytest suite (144 tests, incl. C++ vs Python and charging requirements)
 ├── scripts/               loss-map generator, build-and-test script
 ├── docs/                  design, physics, validation, C++, learning guide
 └── .github/workflows/     CI configuration (Linux + Windows)
@@ -118,6 +127,7 @@ EV-DynaSim/
 
 ## Documentation
 
+0. [Project story: problem, approach, results](docs/00_project_story.md)
 1. [Toolchain: languages, tools, libraries, setup](docs/01_toolchain.md)
 2. [Architecture and design decisions](docs/02_architecture.md)
 3. [Physics model](docs/03_physics_model.md)
@@ -126,6 +136,7 @@ EV-DynaSim/
 6. [Calibration and validation](docs/06_validation.md)
 7. [C++ engine](docs/07_cpp_engine.md)
 8. [Forward simulation and driver control](docs/08_forward_simulation.md)
+9. [DC fast charging and its test specification](docs/09_charging.md)
 
 ## Author
 

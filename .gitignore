@@ -20,6 +20,9 @@ data/raw/*
 !data/raw/.gitkeep
 
 # Editors / OS
+.vs/
+CMakeSettings.json
+CMakeUserPresets.json
 .vscode/*
 !.vscode/extensions.json
 .idea/

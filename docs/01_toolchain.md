@@ -114,7 +114,7 @@ No internet during configure? Install GoogleTest with vcpkg and use
 
 ```powershell
 .\.venv\Scripts\python.exe -m ruff check .
-.\.venv\Scripts\python.exe -m pytest          # expect: 98 passed
+.\.venv\Scripts\python.exe -m pytest          # expect: 144 passed
 .\.venv\Scripts\evdynasim.exe all --config configs/generic_ev.yaml --out results
 ```
 

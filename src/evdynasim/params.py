@@ -220,6 +220,46 @@ class Thermal:
 
 
 @dataclass(frozen=True)
+class Charging:
+    """DC fast charging: charger, battery management (BMS) limits and active cooling.
+
+    The BMS allows the smallest of three currents (see charging.py):
+    the C-rate limit (reduced by temperature), the charger power limit and
+    the current that keeps the terminal voltage at the CV limit.
+    """
+
+    charger_max_power_w: float
+    charger_efficiency: float  # grid -> battery terminals
+    max_c_rate: float  # 1/h, at full temperature permission
+    cv_cell_voltage_v: float  # constant-voltage limit per cell
+    derate_temp_c: Table1D  # x = battery temperature, y = allowed fraction of max C-rate
+    derate_soc: Table1D  # x = SOC, y = allowed fraction of max C-rate (taper at high SOC)
+    max_cell_temp_c: float  # charging stops above this temperature
+    cooling_w_k: float  # active cooling during charging
+    coolant_temp_c: float
+    end_current_c_rate: float  # CV phase ends when the current falls below this
+
+    def __post_init__(self) -> None:
+        _check(self, positive=("charger_max_power_w", "max_c_rate", "cv_cell_voltage_v",
+                               "max_cell_temp_c"),
+               efficiency=("charger_efficiency",),
+               non_negative=("cooling_w_k", "end_current_c_rate"))  # fmt: skip
+        for table in (self.derate_temp_c, self.derate_soc):
+            if table.y.min() < 0.0 or table.y.max() > 1.0:
+                raise ValueError("Charging derating factors must be in [0, 1]")
+
+    def temperature_factor(self, temp_c: float) -> float:
+        """Allowed fraction of the maximum C-rate at this battery temperature."""
+        if temp_c >= self.max_cell_temp_c:
+            return 0.0
+        return float(self.derate_temp_c(temp_c))
+
+    def soc_factor(self, soc: float) -> float:
+        """Allowed fraction of the maximum C-rate at this SOC."""
+        return float(self.derate_soc(soc))
+
+
+@dataclass(frozen=True)
 class ModelParams:
     name: str
     body: Body
@@ -230,6 +270,7 @@ class ModelParams:
     aux: Auxiliaries
     battery: Battery
     thermal: Thermal
+    charging: Charging | None = None  # optional section, only needed for charging studies
 
     @classmethod
     def from_dict(cls, cfg: dict[str, Any], base_dir: Path | None = None) -> ModelParams:
@@ -297,9 +338,27 @@ class ModelParams:
                     h_a_w_k=float(th["h_a_w_k"]),
                     initial_temp_c=float(th["initial_temp_c"]),
                 ),
+                charging=_charging_from_dict(cfg.get("charging")),
             )
         except KeyError as exc:
             raise KeyError(f"Missing configuration key: {exc}") from exc
+
+
+def _charging_from_dict(c: dict[str, Any] | None) -> Charging | None:
+    if not c:
+        return None
+    return Charging(
+        charger_max_power_w=float(c["charger_max_power_kw"]) * KW_TO_W,
+        charger_efficiency=float(c["charger_efficiency"]),
+        max_c_rate=float(c["max_c_rate"]),
+        cv_cell_voltage_v=float(c["cv_cell_voltage_v"]),
+        derate_temp_c=Table1D(c["derate_temp_c"], c["derate_temp_factor"]),
+        derate_soc=Table1D(c["derate_soc"], c["derate_soc_factor"]),
+        max_cell_temp_c=float(c["max_cell_temp_c"]),
+        cooling_w_k=float(c["cooling_w_k"]),
+        coolant_temp_c=float(c["coolant_temp_c"]),
+        end_current_c_rate=float(c["end_current_c_rate"]),
+    )
 
 
 def load_params(path: str | Path) -> ModelParams:
