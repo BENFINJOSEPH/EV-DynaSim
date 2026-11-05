@@ -1,0 +1,27 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# C++ build output (used from milestone 4)
+build/
+out/
+
+# Simulation outputs (regenerate with the CLI)
+results/
+
+# Large or licensed raw datasets are not committed
+data/raw/*
+!data/raw/.gitkeep
+
+# Editors / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db

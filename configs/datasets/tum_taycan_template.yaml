@@ -1,0 +1,22 @@
+# TEMPLATE for the TUM Porsche Taycan real-world driving dataset
+# (DOI 10.14459/2025mp1774217). The column names below are PLACEHOLDERS.
+#
+# Before use:
+#   1. download a few measurement files and check the licence terms
+#   2. open one file, list the column names and units
+#   3. replace every "TODO_..." with the real column name and fix the scale
+#   4. check the sign convention of the battery current (discharge positive?)
+#   5. run:  evdynasim validate --config configs/taycan.yaml \
+#              --mapping configs/datasets/tum_taycan_template.yaml \
+#              --drives data/raw/taycan/*.csv --n-train 4 --out results/taycan
+# The data files themselves stay in data/raw/ and are not committed.
+
+signals:
+  time:              {column: "TODO_time_column", scale: 1.0}
+  speed_mps:         {column: "TODO_vehicle_speed", scale: 0.2777777777777778}
+  battery_voltage_v: {column: "TODO_hv_battery_voltage", scale: 1.0}
+  battery_current_a: {column: "TODO_hv_battery_current", scale: 1.0}
+  current_sign: 1.0          # set to -1.0 if the logger counts discharge current as negative
+  soc:               {column: "TODO_displayed_soc", scale: 0.01}
+  ambient_temp_c:    {column: "TODO_ambient_temperature", scale: 1.0}
+  # grade is usually not logged; it can be derived from GPS altitude later

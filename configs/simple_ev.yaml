@@ -1,0 +1,63 @@
+# Simplified configuration for hand calculations and regression tests.
+# Constant efficiencies, no gearbox loss, ideal battery (R = 0), no HVAC.
+# With these values the model reduces exactly to the v0.2 model:
+# 15.34 kW at 100 km/h on a flat road.
+
+name: "Simple EV (hand-calculation model)"
+
+vehicle:
+  mass_kg: 1800.0
+  rotating_mass_factor: 1.0
+  drag_coefficient: 0.28
+  frontal_area_m2: 2.3
+  rolling_coefficient: 0.010
+  wheel_radius_m: 0.33
+
+environment:
+  air_density_kg_m3: 1.225
+  gravity_m_s2: 9.81
+  ambient_temp_c: 21.0
+
+drivetrain:
+  gear_ratio: 9.0
+  gearbox_efficiency: 1.0
+
+motor:
+  max_torque_nm: 310.0
+  max_power_kw: 150.0
+  max_speed_rpm: 12000.0
+  loss_map_csv: ""
+  constant_efficiency: 0.90
+  constant_regen_efficiency: 0.85
+
+brakes:
+  regen_fraction: 0.80
+  max_regen_power_kw: 60.0
+  min_regen_speed_kmh: 5.0
+
+auxiliaries:
+  base_power_kw: 0.5
+  hvac_kw_per_k: 0.0
+  hvac_setpoint_c: 21.0
+
+battery:
+  cells_series: 96
+  cells_parallel: 4
+  cell_capacity_ah: 50.0
+  ocv_soc:    [0.0, 1.0]
+  ocv_cell_v: [3.75, 3.75]        # flat OCV: energy SOC == charge SOC
+  r0_cell_mohm: 0.0
+  r1_cell_mohm: 0.0
+  tau1_s: 30.0
+  arrhenius_b_k: 0.0
+  r_ref_temp_c: 25.0
+  max_charge_power_kw: 1000.0
+  max_discharge_power_kw: 1000.0
+  charge_derate_start_soc: 0.99
+  initial_soc: 0.90
+
+thermal:
+  mass_kg: 450.0
+  heat_capacity_j_kgk: 1000.0
+  h_a_w_k: 30.0
+  initial_temp_c: 21.0

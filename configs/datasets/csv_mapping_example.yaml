@@ -1,0 +1,14 @@
+# Signal mapping for measured-data CSV files (read by evdynasim.measured).
+#
+# For each quantity the model needs: which column holds it and how to convert
+# it to SI units:  value_SI = raw * scale + offset
+# Remove a line or leave "column" empty if the signal is not available.
+# Battery power can be given directly or as voltage and current.
+
+signals:
+  time:             {column: "time_s", scale: 1.0}
+  speed_mps:        {column: "speed_kmh", scale: 0.2777777777777778}   # km/h -> m/s
+  grade_pct:        {column: "grade_pct", scale: 1.0}
+  battery_power_w:  {column: "battery_power_kw", scale: 1000.0}
+  soc:              {column: "soc_pct", scale: 0.01}
+  ambient_temp_c:   {column: "ambient_temp_c", scale: 1.0}

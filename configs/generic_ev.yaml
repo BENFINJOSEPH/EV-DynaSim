@@ -1,0 +1,67 @@
+# Generic mid-size battery electric vehicle - detailed model (v0.3+).
+# All values are ASSUMED example values for development and testing.
+# They are not the specification of any real vehicle.
+#
+# Units are part of every key name. The code converts to SI once.
+# This file must stay inside the simple YAML subset that the C++ engine
+# reads: "section:" lines, "key: value" lines, numbers, quoted strings,
+# and one-line lists [a, b, c]. Comments start with #.
+
+name: "Generic mid-size BEV (assumed values)"
+
+vehicle:
+  mass_kg: 1800.0                 # test mass incl. driver
+  rotating_mass_factor: 1.03      # adds inertia of wheels, shafts, rotor
+  drag_coefficient: 0.28          # Cd [-]
+  frontal_area_m2: 2.3            # A [m^2]
+  rolling_coefficient: 0.010      # Crr [-]
+  wheel_radius_m: 0.33            # dynamic rolling radius
+
+environment:
+  air_density_kg_m3: 1.225
+  gravity_m_s2: 9.81
+  ambient_temp_c: 25.0
+
+drivetrain:
+  gear_ratio: 9.0                 # single-speed reduction, motor : wheel
+  gearbox_efficiency: 0.97
+
+motor:
+  max_torque_nm: 310.0
+  max_power_kw: 150.0
+  max_speed_rpm: 12000.0
+  loss_map_csv: "maps/generic_pmsm_loss.csv"   # path relative to this file; "" = use constants
+  constant_efficiency: 0.90       # used only when no loss map is given
+  constant_regen_efficiency: 0.85
+
+brakes:
+  regen_fraction: 0.80            # share of braking power requested from the motor
+  max_regen_power_kw: 60.0        # at the wheel
+  min_regen_speed_kmh: 5.0        # below this only friction brakes
+
+auxiliaries:
+  base_power_kw: 0.4              # 12 V systems, controllers, pumps
+  hvac_kw_per_k: 0.08             # heating/cooling per K away from the setpoint
+  hvac_setpoint_c: 21.0
+
+battery:
+  cells_series: 96
+  cells_parallel: 4
+  cell_capacity_ah: 50.0          # pack: 200 Ah, about 71 kWh
+  ocv_soc:    [0.00, 0.05, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 0.95, 1.00]
+  ocv_cell_v: [3.00, 3.30, 3.45, 3.55, 3.62, 3.67, 3.72, 3.79, 3.87, 3.95, 4.05, 4.11, 4.18]
+  r0_cell_mohm: 1.0               # ohmic resistance at the reference temperature
+  r1_cell_mohm: 0.6               # polarisation resistance (RC branch)
+  tau1_s: 30.0                    # RC time constant
+  arrhenius_b_k: 3000.0           # resistance rises about 3.8x from 25 to -10 degC
+  r_ref_temp_c: 25.0
+  max_charge_power_kw: 80.0
+  max_discharge_power_kw: 200.0
+  charge_derate_start_soc: 0.90
+  initial_soc: 0.80
+
+thermal:
+  mass_kg: 450.0                  # thermal mass of the pack
+  heat_capacity_j_kgk: 1000.0
+  h_a_w_k: 30.0                   # heat transfer to ambient (passive)
+  initial_temp_c: 25.0

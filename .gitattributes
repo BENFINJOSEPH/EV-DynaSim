@@ -1,0 +1,12 @@
+# Normalise line endings: LF in the repository and in the working copy,
+# so Windows checkouts and the Linux CI runners see identical files.
+* text=auto eol=lf
+
+# Windows-only scripts keep CRLF
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.pdf binary
